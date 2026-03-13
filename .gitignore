@@ -1,0 +1,99 @@
+# -------------------------
+# Python artifacts
+# -------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Logs
+*.log
+
+# -------------------------
+# Environment / secrets
+# -------------------------
+.env
+.env.*.local
+secrets.json
+
+# -------------------------
+# Alembic / Migrations caches
+# -------------------------
+migrations/__pycache__/
+migrations/versions/__pycache__/
+alembic/__pycache__/
+
+# -------------------------
+# Database files (local dev/testing)
+# -------------------------
+*.db
+*.sqlite3
+*.db-journal
+
+# -------------------------
+# IDE / editor files
+# -------------------------
+.vscode/
+*.code-workspace
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# -------------------------
+# Mac / Linux / Windows system files
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Docker / Terraform / CI
+# -------------------------
+# Ignore local Docker builds
+docker-compose.override.yml
+*.dockerfile
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# -------------------------
+# Python tools
+# -------------------------
+# Pyright / mypy
+.mypy_cache/
+.pyre/
+.pytype/
