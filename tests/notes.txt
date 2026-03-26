@@ -1,0 +1,17 @@
+unit tests for all methods other than endpoints
+
+
+integration tests for endpoints
+
+
+
+1. Dockerfile
+2. Dockercompose
+3. Study AWS - S3 and Lambda
+4. Integrate S3bucket with API and store documents
+5. boto3 - aws library to connect python code with aws services
+6. integrate JWT and login
+7. no need frontend, all test swagger or similar things, postman too
+8. Lambda integrate with S3 manualy in AWS console
+# lambda funuction is a code, run automaticly whenever new file is in S3 bucket
+# like trigger in databases
