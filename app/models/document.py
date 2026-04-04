@@ -6,10 +6,8 @@ class Document(Base):
     __tablename__ = 'documents'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    filetype = Column(String, nullable=False)
-    content = Column(String, nullable=False)
-    #it will be a path so the documents will be stored in AWS
+    #key is used as an indicator to external database where its stored
+    key = Column(String, nullable=False)
 
     project_id = Column(Integer, ForeignKey('projects.id'))
     projects = relationship("Project", back_populates="documents")
