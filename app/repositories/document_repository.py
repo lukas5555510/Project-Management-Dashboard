@@ -11,7 +11,7 @@ class DocumentRepository:
 
     def get_by_project_id(self, project_id: int, limit: int) -> List[Document]:
         # return all documents that belongs to certain project
-        return (self.db.query(Document).filter(Document.project_id == project_id).all().limit(limit))
+        return self.db.query(Document).filter(Document.project_id == project_id).all().limit(limit)
 
     def get_by_document_id(self, document_id: int) -> Document:
         # returns document with certain id

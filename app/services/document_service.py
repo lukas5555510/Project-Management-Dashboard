@@ -12,6 +12,7 @@ class DocumentService:
         self.s3_client = S3Client()
 
     def get_project_documents(self, project_id: int, user_id: int):
+
         if not self.repo.has_access(project_id, user_id):
             raise PermissionDenied()
         return self.repo.list_by_project(project_id)
@@ -29,14 +30,14 @@ class DocumentService:
         doc = self.repo.get(document_id)
         if not doc or not self.repo.has_access(doc.project_id, user_id):
             raise NotFoundError()
-        return download_file_from_s3(doc.s3_key)
+        #return download_file_from_s3(doc.s3_key)
 
     def update_document(self, document_id: int, user_id: int, file: UploadFile):
         doc = self.repo.get(document_id)
         if not doc or not self.repo.has_access(doc.project_id, user_id):
             raise NotFoundError()
-        new_key = upload_file_to_s3(file)
-        return self.repo.update(document_id, file.filename, new_key)
+        #new_key = upload_file_to_s3(file)
+        #return self.repo.update(document_id, file.filename, new_key)
 
     def delete_document(self, document_id: int, user_id: int):
         doc = self.repo.get(document_id)

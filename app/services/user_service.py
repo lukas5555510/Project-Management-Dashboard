@@ -1,4 +1,6 @@
+from app.core.security import pwd_context, create_access_token, decode_access_token
 from app.repositories.user_repository import UserRepository
+from app.config.settings import settings
 from fastapi import HTTPException
 
 class UserService:
@@ -27,10 +29,7 @@ class UserService:
     def login(self, login: str, password: str):
         user = self.authenticate_user(login, password)
 
-        token = create_access_token(
-            data={"sub": user.login},
-            expires_delta=get_token_expire_time()
-        )
+        token = create_access_token(user.login,settings.expires_minutes)
 
         return {
             "access_token": token,
