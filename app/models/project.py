@@ -7,8 +7,7 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    description = Column(String)
-
+    description = Column(String, nullable=True)
     documents = relationship("Document", back_populates="projects")
 
 class ProjectUser(Base):
@@ -19,12 +18,12 @@ class ProjectUser(Base):
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     role_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
-    users = relationship('User', backref='projects_users')
-    roles = relationship('Role', backref='projects_users')
+    users = relationship('User', backref='project_users')
+    roles = relationship('Role', backref='project_users')
 
 class Role(Base):
     __tablename__ = 'roles'
-    # example roles, owner / editor / viewer
+    # example roles, owner / access
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
 

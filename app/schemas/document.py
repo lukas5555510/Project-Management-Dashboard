@@ -2,30 +2,24 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+
+class DocumentCreate(BaseModel):
+    s3_path: str
+    project_id: int
+
 # GET /document/<document_id>
 class DocumentResponse(BaseModel):
     id: int
+    s3_path: str
     project_id: int
-    filename: str
-    content: bytes
-    uploaded_at: datetime
 
-# PUT /document/<document_id>
+    model_config = {
+        "from_attributes": True  # Enables ORM conversion in Pydantic v2
+    }
+
+    class Config:
+        orm_mode = True
+
 class DocumentUpdate(BaseModel):
-    filename: Optional[str] = None
-    content: Optional[str] = None
-
-# DELETE /document/<document_id>
-class DocumentDelete(BaseModel):
-    message: str
-
-class UploadingList(BaseModel):
-    items: list[DocumentResponse] = []
-
-# GET /project/<project_id>/documents
-class ProjectDocumentListResponse(UploadingList):
-    pass
-
-# POST /project/<project_id>/documents
-class ProjectDocumentUpload(UploadingList):
-    pass
+    s3_path: str
+    project_id: int

@@ -1,25 +1,72 @@
+from io import BytesIO
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from app.schemas.document import DocumentUpdate
+from starlette import status
+from starlette.responses import StreamingResponse
+
+from app.api.deps import get_current_user_id
+from app.schemas.document import DocumentResponse, DocumentUpdate
 from app.services.document_service import DocumentService
 
 router = APIRouter()
 
-@router.get("/project/{project_id}/documents")
-async def get_documents(project_id: int, document_service: DocumentService = Depends()):
-    return await document_service.get_documents(project_id)
+@router.get("/project/{project_id}/documents", response_model=List[DocumentResponse])
+def get_project_documents(
+    project_id: int,
+    user_id: int = Depends(get_current_user_id),
+    document_service: DocumentService = Depends()
+):
+    """Get all documents for a specific project"""
+    return document_service.get_project_documents(project_id, user_id)
 
-@router.post("/project/{project_id}/documents")
-async def upload_document(project_id: int, file: UploadFile = File(...), document_service: DocumentService = Depends()):
-    return await document_service.upload_document(project_id, file)
+
+@router.post("/project/{project_id}/documents", response_model=DocumentResponse)
+def upload_document(
+    project_id: int,
+    file: UploadFile = File(...),
+    user_id: int = Depends(get_current_user_id),
+    document_service: DocumentService = Depends()
+):
+    """Upload a new document to a project"""
+    return document_service.upload_document(project_id, file)
+
 
 @router.get("/document/{document_id}")
-async def download_document(document_id: int, document_service: DocumentService = Depends()):
-    return await document_service.download_document(document_id)
+def download_document(
+    document_id: int,
+    user_id: int = Depends(get_current_user_id),
+    document_service: DocumentService = Depends()
+):
+    """Download a specific document"""
+    file_data = document_service.download_document(document_id)
 
-@router.put("/document/{document_id}", response_model=DocumentUpdate)
-async def update_document(document_id: int, document: DocumentUpdate, document_service: DocumentService = Depends()):
-    return await document_service.update_document(document_id, document)
+    # Create a BytesIO object from the file content
+    content_stream = BytesIO(file_data["content"])
 
-@router.delete("/document/{document_id}")
-async def delete_document(document_id: int, document_service: DocumentService = Depends()):
-    return await document_service.delete_document(document_id)
+    return StreamingResponse(
+        content_stream,
+        media_type=file_data["media_type"],
+        headers={"Content-Disposition": f"attachment; filename={file_data['filename']}"}
+    )
+
+
+@router.put("/document/{document_id}", response_model=DocumentResponse)
+def update_document(
+    document_id: int,
+    document_data: DocumentUpdate,
+    user_id: int = Depends(get_current_user_id),
+    document_service: DocumentService = Depends()
+):
+    """Update document metadata"""
+    return document_service.update_document(document_id, document_data)
+
+
+@router.delete("/document/{document_id}", status_code=status.HTTP_200_OK)
+def delete_document(
+    document_id: int,
+    user_id: int = Depends(get_current_user_id),
+    document_service: DocumentService = Depends()
+):
+    """Delete a document"""
+    return document_service.delete_document(document_id)

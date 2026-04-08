@@ -9,9 +9,9 @@ class DocumentRepository:
     # lambda functions for AWS service
     # aws sandbox, in learning platform, we can use bucket s3 bucket file uploaded here and it should be logged "file was uploaded"
 
-    def get_by_project_id(self, project_id: int, limit: int) -> List[Document]:
+    def get_by_project_id(self, project_id: int) -> List[Document]:
         # return all documents that belongs to certain project
-        return self.db.query(Document).filter(Document.project_id == project_id).all().limit(limit)
+        return self.db.query(Document).filter(Document.project_id == project_id).all()
 
     def get_by_document_id(self, document_id: int) -> Document:
         # returns document with certain id
@@ -32,7 +32,7 @@ class DocumentRepository:
 
         return obj
 
-    def delete_document(self, document_id: int) -> Document:
+    def delete_document(self, document_id: int) -> Document | None:
         # deletes document from database
         obj = self.get_by_document_id(document_id)
         if not obj:
@@ -42,6 +42,13 @@ class DocumentRepository:
         self.db.commit()
 
         return obj
+
+    def delete_all_project_documents(self, project_id: int) -> int:
+        deleted_count = (
+            self.db.query(Document).filter(Document.project_id == project_id).delete(synchronize_session=False)
+        )
+        self.db.commit()
+        return deleted_count
 
     def upload_documents(self, documents: List[dict]) -> List[Document]:
         # adds list of records to database

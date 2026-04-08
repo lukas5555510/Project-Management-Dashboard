@@ -1,14 +1,11 @@
 from pydantic import BaseModel, Field, EmailStr
 
-# POST /auth
 class UserCreate(BaseModel):
     login: str
     email: EmailStr
     password: str
-    repeat_password: str
 
-# POST /login
-class UserLogin(BaseModel):
+class UserResponse(BaseModel):
     login: str
     password: str
 

@@ -18,10 +18,10 @@ def verify_password(password: str, hashed: str) -> bool:
     return pwd_context.verify(password, hashed)
 
 
-def create_access_token(sub: str, expires_minutes: int = 60) -> str:
+def create_access_token(user_id: int, expires_minutes: int = 60) -> str:
     """Create a JWT access token with expiration."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
-    payload = {"sub": str(sub), "exp": expire}
+    payload = {"user_id": str(user_id), "exp": expire}
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return token
 
@@ -33,3 +33,11 @@ def decode_access_token(token: str) -> Optional[dict]:
         return payload
     except jwt.PyJWTError:
         return None
+
+def get_user_id_from_token(token: str) -> int | None:
+    """Get user id from JWT token."""
+
+    payload = decode_access_token(token)
+    if payload:
+        return payload["user_id"]
+    return None

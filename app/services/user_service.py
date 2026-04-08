@@ -35,3 +35,6 @@ class UserService:
             "access_token": token,
             "token_type": "bearer"
         }
+
+    def get_by_login(self, login):
+        pass
