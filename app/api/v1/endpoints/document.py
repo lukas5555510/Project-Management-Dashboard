@@ -20,7 +20,7 @@ def get_project_documents(
     """Get all documents for a specific project"""
     return document_service.get_project_documents(project_id, user_id)
 
-
+# dnt know how to handle it
 @router.post("/project/{project_id}/documents", response_model=DocumentResponse)
 def upload_document(
     project_id: int,

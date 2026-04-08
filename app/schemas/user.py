@@ -11,5 +11,5 @@ class UserResponse(BaseModel):
 
 
 class Token(BaseModel):
-    access_token: str = Field(..., description="JWT access token for authentication")
-    token_type: str = Field(default="bearer", description="Token type, usually 'bearer'")
+    access_token: str
+    token_type: str

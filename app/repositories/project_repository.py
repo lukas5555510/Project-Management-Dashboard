@@ -3,6 +3,8 @@ from app.models.project import Project, Role, ProjectUser
 from app.models.user import User
 from sqlalchemy.orm import Session
 from typing import List
+from app.core.constants import ROLES
+
 
 
 class ProjectRepository:
@@ -47,6 +49,22 @@ class ProjectUserRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    def seed_roles(self):
+
+        existing_roles = {
+            role.name for role in self.db.query(Role).filter(Role.name.in_(ROLES)).all()
+        }
+
+        missing_roles = [
+            Role(name =role_name)
+            for role_name in ROLES
+            if role_name not in existing_roles
+        ]
+
+        if missing_roles:
+            self.db.add_all(missing_roles)
+            self.db.commit()
+
     def create_ownership(self, project_id: int, user_id: int) -> ProjectUser:
         role = self.db.query(Role).filter(Role.name == "owner").one()
         obj = ProjectUser(project_id, user_id, role.id)
@@ -57,7 +75,7 @@ class ProjectUserRepository:
         return obj
 
     def create_access(self, project_id: int, user_id: int):
-        role = self.db.query(Role).filter(Role.name == "access").one()
+        role = self.db.query(Role).filter(Role.name == "participant").one()
         obj = ProjectUser(project_id, user_id, role.id)
         self.db.add(obj)
         self.db.commit()
@@ -95,7 +113,7 @@ class ProjectUserRepository:
                     and_(
                         ProjectUser.project_id == project_id,
                         ProjectUser.user_id == user_id,
-                        Role.name.in_(["access", "owner"])
+                        Role.name.in_(["participant", "owner"])
                     )
                 )
                 .count() > 0
@@ -108,7 +126,7 @@ class ProjectUserRepository:
             .join(Role, Role.id == ProjectUser.role_id)
             .filter(
                 ProjectUser.user_id == user_id,
-                Role.name.in_(["access", "owner"])
+                Role.name.in_(["participant", "owner"])
             )
             .distinct()
             .all()

@@ -15,3 +15,7 @@ integration tests for endpoints
 8. Lambda integrate with S3 manualy in AWS console
 # lambda funuction is a code, run automaticly whenever new file is in S3 bucket
 # like trigger in databases
+
+
+the s3 workflow
+file to s3 then lamba functions should zip it and put it back in s3
