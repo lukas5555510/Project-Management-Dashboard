@@ -1,13 +1,17 @@
+from fastapi import Depends
+from pydantic import EmailStr
+
+from app.db.session import get_db
 from app.models.user import User
 from sqlalchemy.orm import Session
 from typing import List
 
 
 class UserRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
-    def create_user(self, login: str, email: str, hashed_password: str):
+    def create_user(self, login: str, email: EmailStr, hashed_password: str):
         obj = User(
             login=login,
             email=email,

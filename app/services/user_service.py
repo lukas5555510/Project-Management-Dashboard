@@ -1,40 +1,23 @@
-from app.core.security import pwd_context, create_access_token, decode_access_token
+from pydantic import EmailStr
+from sqlalchemy.orm import Session
+from app.core.security import pwd_context
+from app.db.session import get_db
+from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.config.settings import settings
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
+
 
 class UserService:
-    def __init__(self, repository: UserRepository):
-        self.repo = repository
+    def __init__(self, db: Session = Depends(get_db)):
+        self.repo = UserRepository(db)
 
-    def create_user(self, login: str, email: str, password: str, repeat_password: str):
-        if password != repeat_password:
-            raise HTTPException(status_code=400, detail="Passwords do not match")
-
-        if self.repo.get_user_by_login(login):
-            raise HTTPException(status_code=400, detail="User already exists")
-
-        hashed_password = pwd_context.hash(password)
-
+    def create_user(self, login: str, email: EmailStr, hashed_password: str):
         return self.repo.create_user(login, email, hashed_password)
 
-    def authenticate_user(self, login: str, password: str):
-        user = self.repo.get_user_by_login(login)
+    def get_user_by_login(self, login: str) -> User:
+        return self.repo.get_user_by_login(login)
 
-        if not user or not pwd_context.verify(password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+    def get_user_by_id(self, user_id: int) -> User:
+        return self.repo.get_user_by_id(user_id)
 
-        return user
-
-    def login(self, login: str, password: str):
-        user = self.authenticate_user(login, password)
-
-        token = create_access_token(user.login,settings.expires_minutes)
-
-        return {
-            "access_token": token,
-            "token_type": "bearer"
-        }
-
-    def get_by_login(self, login):
-        pass

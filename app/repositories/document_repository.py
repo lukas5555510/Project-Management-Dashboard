@@ -1,10 +1,13 @@
+from fastapi import Depends
+
+from app.db.session import get_db
 from app.models.document import Document
 from sqlalchemy.orm import Session
 from typing import List
 
 
 class DocumentRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session = Depends(get_db)):
         self.db = db
     # lambda functions for AWS service
     # aws sandbox, in learning platform, we can use bucket s3 bucket file uploaded here and it should be logged "file was uploaded"

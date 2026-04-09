@@ -2,11 +2,11 @@ from sqlalchemy import Column, Integer, String, ForeignKey, LargeBinary
 from app.db.base import Base, relationship
 
 class Document(Base):
+    __tablename__ = "documents"
 
-    __tablename__ = 'documents'
+    id = Column(Integer, primary_key=True)
+    s3_path = Column(String, nullable=False)  # S3 key
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
 
-    id = Column(Integer, primary_key=True, index=True)
-    s3_path = Column(String, nullable=False)
-    project_id = Column(Integer, ForeignKey('projects.id'))
-
-    projects = relationship("Project", back_populates="documents")
+    # relationships
+    project = relationship("Project", back_populates="documents")

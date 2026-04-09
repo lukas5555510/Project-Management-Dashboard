@@ -5,13 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette import status
 from starlette.responses import StreamingResponse
 
-from app.api.deps import get_current_user_id
+from app.core.security import get_current_user_id
 from app.schemas.document import DocumentResponse, DocumentUpdate
 from app.services.document_service import DocumentService
 
 router = APIRouter()
 
-@router.get("/project/{project_id}/documents", response_model=List[DocumentResponse])
+@router.get("/project/{project_id}/documents", response_model = List[DocumentResponse])
 def get_project_documents(
     project_id: int,
     user_id: int = Depends(get_current_user_id),
@@ -20,8 +20,7 @@ def get_project_documents(
     """Get all documents for a specific project"""
     return document_service.get_project_documents(project_id, user_id)
 
-# dnt know how to handle it
-@router.post("/project/{project_id}/documents", response_model=DocumentResponse)
+@router.post("/project/{project_id}/documents", response_model = DocumentResponse)
 def upload_document(
     project_id: int,
     file: UploadFile = File(...),
@@ -29,6 +28,7 @@ def upload_document(
     document_service: DocumentService = Depends()
 ):
     """Upload a new document to a project"""
+    # return DocumentResponse(id = 1, s3_path = "asdf",project_id = 2)
     return document_service.upload_document(project_id, file)
 
 

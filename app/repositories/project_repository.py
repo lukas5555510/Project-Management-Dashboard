@@ -1,4 +1,7 @@
+from fastapi import Depends
 from sqlalchemy import or_, and_
+
+from app.db.session import get_db
 from app.models.project import Project, Role, ProjectUser
 from app.models.user import User
 from sqlalchemy.orm import Session
@@ -8,11 +11,11 @@ from app.core.constants import ROLES
 
 
 class ProjectRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
-    def create_project(self, user_id: int, name: str, description: str) -> Project:
-        obj = Project(user_id=user_id, name=name, description=description)
+    def create_project(self, name: str, description: str) -> Project:
+        obj = Project(name=name, description=description)
         self.db.add(obj)
         self.db.commit()
         self.db.refresh(obj)
@@ -46,7 +49,7 @@ class ProjectRepository:
 
 
 class ProjectUserRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
     def seed_roles(self):
@@ -67,7 +70,7 @@ class ProjectUserRepository:
 
     def create_ownership(self, project_id: int, user_id: int) -> ProjectUser:
         role = self.db.query(Role).filter(Role.name == "owner").one()
-        obj = ProjectUser(project_id, user_id, role.id)
+        obj = ProjectUser(user_id=user_id,project_id=project_id, role_id=role.id)
         self.db.add(obj)
         self.db.commit()
         self.db.refresh(obj)
@@ -76,7 +79,7 @@ class ProjectUserRepository:
 
     def create_access(self, project_id: int, user_id: int):
         role = self.db.query(Role).filter(Role.name == "participant").one()
-        obj = ProjectUser(project_id, user_id, role.id)
+        obj = ProjectUser(user_id=user_id,project_id=project_id, role_id=role.id)
         self.db.add(obj)
         self.db.commit()
         self.db.refresh(obj)
@@ -103,7 +106,7 @@ class ProjectUserRepository:
 
     def user_has_access(self, user_id: int, project_id: int) -> bool:
         """
-        Returns True if the user is an 'owner' of the project, False otherwise.
+        Returns True if the user is an 'owner/participant' of the project, False otherwise.
         """
         return (
                 self.db.query(User)
@@ -131,4 +134,6 @@ class ProjectUserRepository:
             .distinct()
             .all()
         )
+
+
 
