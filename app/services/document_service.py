@@ -23,12 +23,12 @@ class DocumentService:
 
     def get_project_documents(self, project_id: int, user_id: int) -> List[DocumentResponse]:
         #Get documents from database
-        if not self.repo_project_user.user_has_access(project_id, user_id):
+        if not self.repo_project_user.user_has_access(user_id, project_id):
             raise PermissionDenied()
         documents = self.repo.get_by_project_id(project_id)
         return [DocumentResponse.model_validate(doc) for doc in documents]
 
-    # here i how it should look like handling pdf file
+# TODO
     def upload_document(self, project_id: int, file: UploadFile) -> DocumentResponse:
         # Generate a unique filename to avoid collisions in S3
         filename = f"{uuid.uuid4()}_{file.filename}"
@@ -49,7 +49,7 @@ class DocumentService:
         document = self.repo.create_document(document_data)
         return DocumentResponse.model_validate(document)
 
-# to refactor
+# TODO
     def download_document(self, document_id: int) -> Dict[str, Any]:
         # Get document from database
         document = self.repo.get_by_document_id(document_id)
@@ -63,7 +63,7 @@ class DocumentService:
         return {
             "content": file_content,
         }
-
+# TODO
     def update_document(self, document_id: int, document_data: DocumentUpdate) -> DocumentResponse:
         # Get existing document
         existing_document = self.repo.get_by_document_id(document_id)

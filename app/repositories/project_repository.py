@@ -4,7 +4,7 @@ from sqlalchemy import or_, and_
 from app.db.session import get_db
 from app.models.project import Project, Role, ProjectUser
 from app.models.user import User
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from app.core.constants import ROLES
 
@@ -14,6 +14,41 @@ class ProjectRepository:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
+    def get_all_projects_for_user(self, user_id: int) -> List[Project]:
+        """
+        Get all projects accessible to a user with eager loading of documents.
+        """
+        return (
+            self.db.query(Project)
+            .options(joinedload(Project.documents))  # Eager load documents
+            .join(ProjectUser, ProjectUser.project_id == Project.id)
+            .join(Role, Role.id == ProjectUser.role_id)
+            .filter(
+                ProjectUser.user_id == user_id,
+                Role.name.in_(["participant", "owner"])
+            )
+            .distinct()
+            .all()
+        )
+
+    def get_project_by_id(self, user_id: int, project_id: int) -> Project:
+        """
+        Get project accessible to a user with eager loading of documents.
+        """
+        return (
+            self.db.query(Project)
+            .options(joinedload(Project.documents))  # Eager load documents
+            .join(ProjectUser, ProjectUser.project_id == Project.id)
+            .join(Role, Role.id == ProjectUser.role_id)
+            .filter(
+                ProjectUser.user_id == user_id,
+                Role.name.in_(["participant", "owner"]),
+                Project.id == project_id,
+            )
+            .distinct()
+            .first()
+        )
+
     def create_project(self, name: str, description: str) -> Project:
         obj = Project(name=name, description=description)
         self.db.add(obj)
@@ -21,11 +56,9 @@ class ProjectRepository:
         self.db.refresh(obj)
         return obj
 
-    def get_by_project_id(self, project_id: int) -> Project:
-        return self.db.query(Project).filter(Project.project_id == project_id).one()
 
-    def update_project(self, project_id: int, project: dict) -> Project | None:
-        obj = self.get_by_project_id(project_id)
+    def update_project(self, user_id: int, project_id: int, project: dict) -> Project | None:
+        obj = self.get_project_by_id(user_id,project_id)
 
         if not obj:
             return None
@@ -38,14 +71,14 @@ class ProjectRepository:
 
         return obj
 
-    def delete_project(self, project_id: int) -> Project | None:
-        obj = self.get_by_project_id(project_id)
+    def delete_project(self, project_id: int) -> True | False:
+        obj = self.db.query(Project).filter(Project.id == project_id).first()
         if not obj:
-            return None
+            return False
         self.db.delete(obj)
         self.db.commit()
 
-        return obj
+        return True
 
 
 class ProjectUserRepository:
@@ -121,19 +154,5 @@ class ProjectUserRepository:
                 )
                 .count() > 0
         )
-
-    def get_all_project_available_for_user(self, user_id: int) -> List[Project]:
-        return (
-            self.db.query(Project)
-            .join(ProjectUser, ProjectUser.project_id == Project.id)
-            .join(Role, Role.id == ProjectUser.role_id)
-            .filter(
-                ProjectUser.user_id == user_id,
-                Role.name.in_(["participant", "owner"])
-            )
-            .distinct()
-            .all()
-        )
-
 
 

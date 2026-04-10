@@ -1,9 +1,10 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
+from starlette import status
 
 from app.core.security import get_current_user_id
-from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectDeleteResponse
 from app.services.project_service import ProjectService
 
 router = APIRouter()
@@ -21,14 +22,14 @@ def get_projects(
         project_service: ProjectService = Depends(),
         user_id: int = Depends(get_current_user_id)
 ):
-    return project_service.get_projects_for_user(user_id)
+    return project_service.get_user_projects_with_documents(user_id)
 
-@router.get("/project/{project_id}/info")
+@router.get("/project/{project_id}/info", response_model = ProjectResponse)
 def get_project_info(
         project_id: int, project_service: ProjectService = Depends(),
         user_id: int = Depends(get_current_user_id)
 ):
-    return project_service.get_project_info(project_id)
+    return project_service.get_project(user_id, project_id)
 
 @router.put("/project/{project_id}/info", response_model=ProjectUpdate)
 def update_project_info(
@@ -37,15 +38,21 @@ def update_project_info(
         project_service: ProjectService = Depends(),
         user_id: int = Depends(get_current_user_id)
 ):
-    return project_service.update_project_info(project_id, project)
+    return project_service.update_project(project_id, user_id, project)
 
-@router.delete("/project/{project_id}")
+@router.delete("/project/{project_id}", response_model=ProjectDeleteResponse)
 def delete_project(
         project_id: int,
         project_service: ProjectService = Depends(),
         user_id: int = Depends(get_current_user_id)
 ):
-    return project_service.delete_project(project_id)
+    success = project_service.delete_project(user_id, project_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with ID {project_id} not found"
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.post("/project/{project_id}/invite")
 def invite_user_to_project(
