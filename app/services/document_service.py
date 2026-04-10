@@ -2,17 +2,12 @@ import uuid
 from typing import List, Dict, Any
 from fastapi import UploadFile, Depends
 from sqlalchemy.orm import Session
-from starlette import status
-from starlette.exceptions import HTTPException
-
 from app.db.session import get_db
-# from app.core.security import get_user_id_from_token
-from app.models.document import Document
 from app.repositories.document_repository import DocumentRepository
 from app.integrations.aws.s3_client import S3Client
 from app.core.exceptions import NotFoundError, PermissionDenied
 from app.repositories.project_repository import ProjectUserRepository
-from app.schemas.document import DocumentResponse, DocumentUpdate
+from app.schemas.document import DocumentResponse
 
 
 class DocumentService:
@@ -28,17 +23,14 @@ class DocumentService:
         documents = self.repo.get_by_project_id(project_id)
         return [DocumentResponse.model_validate(doc) for doc in documents]
 
-# TODO
     def upload_document(self, project_id: int, file: UploadFile) -> DocumentResponse:
         # Generate a unique filename to avoid collisions in S3
         filename = f"{uuid.uuid4()}_{file.filename}"
 
-        # Read file content
-        file_content = file.file.read()
 
         # Upload the file to S3
-        s3_path = f"projects/{project_id}/documents/{filename}"
-        # self.s3_client.upload_file(file_content, s3_path)
+        s3_path = f"documents/{filename}"
+        self.s3_client.upload_file(file, s3_path)
 
         # Create document record in database
         document_data = {
@@ -49,44 +41,53 @@ class DocumentService:
         document = self.repo.create_document(document_data)
         return DocumentResponse.model_validate(document)
 
-# TODO
-    def download_document(self, document_id: int) -> Dict[str, Any]:
-        # Get document from database
+
+    def download_document(self, document_id: int, user_id: int):
+        # 1. Fetch metadata from DB
         document = self.repo.get_by_document_id(document_id)
+
         if not document:
-            raise NotFoundError(f"Document with id {document_id} not found")
+            raise FileNotFoundError(f"{document_id} not found")
 
-        # Download file from S3
-        file_content = self.s3_client.download_file(document.s3_path)
+        # 2. Authorization check
+        if not self.repo_project_user.user_has_access(user_id, document.project_id):
+            raise PermissionDenied()
 
-        # Return file for download
-        return {
-            "content": file_content,
-        }
-# TODO
-    def update_document(self, document_id: int, document_data: DocumentUpdate) -> DocumentResponse:
+        # 3. Download file from S3
+        file_stream = self.s3_client.download_file(document.s3_path)
+
+        return file_stream['Body'], document.s3_path.split("_",1)[-1], file_stream['ContentType']
+
+
+
+    def update_document(self, document_id: int, file: UploadFile) -> DocumentResponse:
         # Get existing document
         existing_document = self.repo.get_by_document_id(document_id)
         if not existing_document:
             raise NotFoundError(f"Document with id {document_id} not found")
 
-        # Update document
-        updated_document = self.repo.update_document(
-            document_id,
-            document_data.model_dump(exclude_unset=True)
-        )
+        filename = f"{uuid.uuid4()}_{file.filename}"
 
-        if not updated_document:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update document"
-            )
+
+        # Upload the file to S3
+        s3_path = f"documents/{filename}"
+        self.s3_client.upload_file(file, s3_path)
+
+        # Create document record in database
+        document_data = {
+            "s3_path": s3_path,
+            "project_id": existing_document.project_id,
+        }
+
+        updated_document = self.repo.update_document(document_id, document_data)
 
         return DocumentResponse.model_validate(updated_document)
 
-    def delete_document(self, document_id: int) -> dict:
+    def delete_document(self, document_id: int,user_id:int) -> dict:
         # Get document
         document = self.repo.get_by_document_id(document_id)
+        if not self.repo_project_user.is_user_owner(user_id,document.project_id):
+            raise PermissionDenied("Only project owner can delete document")
         if not document:
             raise NotFoundError(f"Document with id {document_id} not found")
 
@@ -98,11 +99,4 @@ class DocumentService:
             print(f"Error deleting file from S3: {e}")
 
         # Delete from database
-        deleted_document = self.repo.delete_document(document_id)
-        if not deleted_document:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to delete document"
-            )
-
-        return {"message": "Document deleted successfully"}
+        return self.repo.delete_document(document_id)

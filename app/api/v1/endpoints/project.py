@@ -46,13 +46,12 @@ def delete_project(
         project_service: ProjectService = Depends(),
         user_id: int = Depends(get_current_user_id)
 ):
-    success = project_service.delete_project(user_id, project_id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Project with ID {project_id} not found"
-        )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return {
+        "success": project_service.delete_project(user_id, project_id),
+        "message": "Project deleted successfully",
+        "deleted_id": project_id
+    }
 
 @router.post("/project/{project_id}/invite")
 def invite_user_to_project(

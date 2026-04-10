@@ -38,28 +38,28 @@ def download_document(
     user_id: int = Depends(get_current_user_id),
     document_service: DocumentService = Depends()
 ):
-    """Download a specific document"""
-    file_data = document_service.download_document(document_id)
-
-    # Create a BytesIO object from the file content
-    content_stream = BytesIO(file_data["content"])
-
-    return StreamingResponse(
-        content_stream,
-        media_type=file_data["media_type"],
-        headers={"Content-Disposition": f"attachment; filename={file_data['filename']}"}
+    file_stream, filename, content_type = document_service.download_document(
+        document_id=document_id,
+        user_id=user_id
     )
 
+    return StreamingResponse(
+        file_stream,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
 
 @router.put("/document/{document_id}", response_model=DocumentResponse)
 def update_document(
     document_id: int,
-    document_data: DocumentUpdate,
+    file: UploadFile = File(...),
     user_id: int = Depends(get_current_user_id),
     document_service: DocumentService = Depends()
 ):
     """Update document metadata"""
-    return document_service.update_document(document_id, document_data)
+    return document_service.update_document(document_id, file)
 
 
 @router.delete("/document/{document_id}", status_code=status.HTTP_200_OK)
@@ -69,4 +69,10 @@ def delete_document(
     document_service: DocumentService = Depends()
 ):
     """Delete a document"""
-    return document_service.delete_document(document_id)
+    if not document_service.delete_document(document_id,user_id):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete document"
+        )
+
+    return {"message": "Document deleted successfully"}

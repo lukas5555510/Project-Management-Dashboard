@@ -1,5 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
+from fastapi import UploadFile
+
 from app.config.settings import settings
 from datetime import datetime, timedelta
 import logging
@@ -17,28 +19,34 @@ class S3Client:
         )
         self.bucket_name = settings.s3_bucket_name
 
-    def upload_file(self, file_path: str, s3_path: str) -> str:
+    def upload_file(self, file: UploadFile, s3_path: str) -> str:
         """Upload a file to S3."""
         try:
-            self.s3.upload_file(file_path, self.bucket_name, s3_path)
+            self.s3.upload_fileobj(file.file, self.bucket_name, s3_path, ExtraArgs={"ContentType": file.content_type})
             return s3_path
         except ClientError as e:
             logger.error(f"S3 upload failed: {e}")
             raise
 
-    def download_file(self, file_path: str, s3_path: str) -> str:
-        """Download a file from S3."""
+    def download_file(self, key: str):
         try:
-            self.s3.download_file(file_path, self.bucket_name, s3_path)
-            return s3_path
+            response = self.s3.get_object(
+                Bucket=self.bucket_name,
+                Key=key
+            )
+
+            # Streaming body (file-like object)
+            return response
+
         except ClientError as e:
-            logger.error(f"S3 download failed: {e}")
-            raise
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                raise FileNotFoundError()
+            raise Exception()
 
     def delete_file(self, s3_path: str):
         """Delete a file from S3."""
         try:
-            self.s3.delete_object(self.bucket_name, s3_path)
+            self.s3.delete_object(Bucket =self.bucket_name,Key= s3_path)
         except ClientError as e:
             logger.error(f"S3 deletion failed: {e}")
             raise

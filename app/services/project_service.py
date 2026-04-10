@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 
 from app.db.session import get_db
+from app.integrations.aws.s3_client import S3Client
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.project_repository import ProjectRepository, ProjectUserRepository
 from app.repositories.user_repository import UserRepository
@@ -23,6 +24,7 @@ class ProjectService:
         self.project_user_repo = ProjectUserRepository(db)
         self.user_repo = UserRepository(db)
         self.document_repo = DocumentRepository(db)
+        self.s3_client = S3Client()
 
     def create_project(self, user_id: int, payload: ProjectCreate):
         project = self.project_repo.create_project(payload.name, payload.description)
@@ -162,7 +164,16 @@ class ProjectService:
         try:
             if not self.project_user_repo.is_user_owner(user_id, project_id):
                 raise PermissionDenied("Only owner can delete project")
-            return self.project_repo.delete_project(project_id)
+
+            documents = self.document_repo.get_by_project_id(project_id)
+
+            for doc in documents:
+                self.s3_client.delete_file(doc.s3_path)
+
+            result = self.project_repo.delete_project(project_id)
+            if not result:
+                raise NotFoundError()
+            return result
 
         except SQLAlchemyError as e:
             logger.exception(f"Database error: {str(e)}")
@@ -170,8 +181,6 @@ class ProjectService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error occurred while fetching projects"
             )
-
-
 
     def grant_access_to_project(self, project_id: int, user_id: int, login: str):
 
