@@ -168,7 +168,8 @@ class TestProjectService:
         result = service.delete_project(10, 1)
 
         assert result == {"deleted": True}
-        assert service.s3_client.delete_file.call_count == 2
+        assert service.s3_client.delete_file_and_zip.call_count == 2
+
 
 
     def test_grant_access_not_owner(self,service):

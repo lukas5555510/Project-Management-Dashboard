@@ -51,3 +51,12 @@ class S3Client:
         except ClientError as e:
             logger.error(f"S3 deletion failed: {e}")
             raise
+
+    def delete_file_and_zip(self, s3_path: str):
+        """Delete a file and zip from S3."""
+        try:
+            self.delete_file(s3_path)
+            zip_path = f'zipped/{s3_path.split("/", 1)[-1]}.zip'
+            self.delete_file(zip_path)
+        except ClientError:
+            raise

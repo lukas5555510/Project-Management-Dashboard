@@ -15,7 +15,6 @@ from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.core.exceptions import PermissionDenied, NotFoundError, ConflictException, DatabaseRequestError
 from app.utils.serializers import serialize_project
 
-
 logger = logging.getLogger(__name__)
 
 class ProjectService:
@@ -107,6 +106,10 @@ class ProjectService:
         """
 
         try:
+            if not self.project_repo.get_project_by_id(user_id, project_id):
+                raise NotFoundError("Project not found")
+            if not self.project_user_repo.user_has_access(user_id, project_id):
+                raise PermissionDenied("User had no access to this project")
             project = self.project_repo.get_project_by_id(user_id, project_id)
             return ProjectResponse.model_validate(serialize_project(project))
 
@@ -178,7 +181,7 @@ class ProjectService:
             documents = self.document_repo.get_by_project_id(project_id)
 
             for doc in documents:
-                self.s3_client.delete_file(doc.s3_path)
+                self.s3_client.delete_file_and_zip(doc.s3_path)
 
             return self.project_repo.delete_project(project_id)
 
@@ -208,6 +211,8 @@ class ProjectService:
         """
 
         try:
+            if not self.project_repo.get_project_by_id(user_id, project_id):
+                raise NotFoundError("Project not found")
             if not self.project_user_repo.is_user_owner(user_id, project_id):
                 raise PermissionDenied("Only owner can invite")
 

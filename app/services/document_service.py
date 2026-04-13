@@ -35,9 +35,10 @@ class DocumentService:
         """
 
         try:
-            #Get documents from database
+            if not self.repo_project.get_project_by_id(user_id,project_id):
+                raise NotFoundError("Project not found")
             if not self.repo_project_user.user_has_access(user_id, project_id):
-                raise PermissionDenied()
+                raise PermissionDenied("User has no access to project")
             documents = self.repo.get_by_project_id(project_id)
             return [DocumentResponse.model_validate(doc) for doc in documents]
         except SQLAlchemyError:
@@ -151,7 +152,8 @@ class DocumentService:
             if not existing_document:
                 raise NotFoundError(f"Document with id {document_id} not found")
 
-            self.s3_client.delete_file(existing_document.s3_path)
+            # Delete old files from S3
+            self.s3_client.delete_file_and_zip(existing_document.s3_path)
 
             filename = f"{uuid.uuid4()}_{file.filename}"
             # Upload the file to S3
@@ -202,10 +204,7 @@ class DocumentService:
                 raise PermissionDenied("Only project owner can delete document")
 
             # Delete from S3 first
-            try:
-                self.s3_client.delete_file(document.s3_path)
-            except S3Client:
-                raise
+            self.s3_client.delete_file_and_zip(document.s3_path)
 
             return self.repo.delete_document(document_id)
 

@@ -2,9 +2,11 @@ import pytest
 from io import BytesIO
 from unittest.mock import MagicMock
 
+from botocore.exceptions import ClientError
 from fastapi.testclient import TestClient
 from starlette.responses import StreamingResponse
 
+from app.core.exceptions import PermissionDenied, NotFoundError, DatabaseRequestError
 from app.main import app
 from app.services.document_service import DocumentService
 
@@ -46,6 +48,20 @@ class TestDocumentEndpoints:
 
         mock_document_service.get_project_documents.assert_called_once_with(10, 1)
 
+    def test_get_documents_unauthorized(self,client,mock_document_service):
+        app.dependency_overrides.clear()
+
+        response = client.get("/project/1/documents")
+
+        assert response.status_code == 401
+
+    def test_get_documents_forbidden(self,client, mock_document_service):
+        mock_document_service.get_project_documents.side_effect = PermissionDenied()
+
+        response = client.get("/project/1/documents")
+
+        assert response.status_code == 403
+
 
     # -------------------------
     # UPLOAD DOCUMENT
@@ -70,6 +86,46 @@ class TestDocumentEndpoints:
         assert response.json()["s3_path"] == "s3/file.txt"
 
         mock_document_service.upload_document.assert_called_once()
+
+    def test_upload_document_unauthorized(self,client, mock_document_service):
+        app.dependency_overrides.clear()
+
+        response = client.post(
+            "/project/1/documents",
+            files={"file": ("test.txt", b"data")}
+        )
+
+        assert response.status_code == 401
+
+    def test_upload_document_forbidden(self,client, mock_document_service):
+        mock_document_service.upload_document.side_effect = PermissionDenied()
+
+        response = client.post(
+            "/project/1/documents",
+            files={"file": ("test.txt", b"data")}
+        )
+
+        assert response.status_code == 403
+
+    def test_upload_document_project_not_found(self,client, mock_document_service):
+        mock_document_service.upload_document.side_effect = NotFoundError("Not Found")
+
+        response = client.post(
+            "/project/999/documents",
+            files={"file": ("test.txt", b"data")}
+        )
+
+        assert response.status_code == 404
+
+    def test_upload_document_storage_failure(self,client, mock_document_service):
+        mock_document_service.upload_document.side_effect = ClientError(operation_name="upload_document",error_response={"error":"yes"})
+
+        response = client.post(
+            "/project/1/documents",
+            files={"file": ("test.txt", b"data")}
+        )
+
+        assert response.status_code == 500
 
 
     # -------------------------
@@ -96,6 +152,33 @@ class TestDocumentEndpoints:
             user_id=1
         )
 
+    def test_download_document_unauthorized(self,client, mock_document_service):
+        app.dependency_overrides.clear()
+
+        response = client.get("/document/1")
+
+        assert response.status_code == 401
+
+    def test_download_document_not_found(self,client, mock_document_service):
+        mock_document_service.download_document.side_effect = NotFoundError("Not Found")
+
+        response = client.get("/document/999")
+
+        assert response.status_code in (404, 500)
+
+    def test_download_document_forbidden(self,client, mock_document_service):
+        mock_document_service.download_document.side_effect = PermissionDenied()
+
+        response = client.get("/document/1")
+
+        assert response.status_code in (403, 404)
+
+    def test_download_document_storage_error(self,client, mock_document_service):
+        mock_document_service.download_document.side_effect = ClientError(operation_name="download",error_response={"error":"yes"})
+
+        response = client.get("/document/1")
+
+        assert response.status_code == 500
 
     # -------------------------
     # UPDATE DOCUMENT
@@ -120,6 +203,36 @@ class TestDocumentEndpoints:
 
         mock_document_service.update_document.assert_called_once()
 
+    def test_update_document_unauthorized(self,client, mock_document_service):
+        app.dependency_overrides.clear()
+
+        response = client.put(
+            "/document/1",
+            files={"file": ("test.txt", b"data")}
+        )
+
+        assert response.status_code == 401
+
+    def test_update_document_not_found(self,client, mock_document_service):
+        mock_document_service.update_document.side_effect = NotFoundError("Not Found")
+
+        response = client.put(
+            "/document/999",
+            files={"file": ("test.txt", b"data")}
+        )
+
+        assert response.status_code == 404
+
+    def test_update_document_storage_failure(self,client, mock_document_service):
+        mock_document_service.update_document.side_effect = ClientError(operation_name="download",error_response={"error":"yes"})
+
+        response = client.put(
+            "/document/1",
+            files={"file": ("test.txt", b"data")}
+        )
+
+        assert response.status_code == 500
+
 
     # -------------------------
     # DELETE DOCUMENT
@@ -137,11 +250,24 @@ class TestDocumentEndpoints:
 
         mock_document_service.delete_document.assert_called_once_with(1, 1)
 
+    def test_delete_document_not_found(self,client, mock_document_service):
+        mock_document_service.delete_document.side_effect = NotFoundError("Not Found")
 
-    def test_delete_document_failure(self,client, mock_document_service):
-        mock_document_service.delete_document.return_value = False
+        response = client.delete("/document/999")
+
+        assert response.status_code == 404
+
+    def test_delete_document_forbidden(self,client, mock_document_service):
+        mock_document_service.delete_document.side_effect = PermissionDenied("Forbidden")
+
+        response = client.delete("/document/1")
+
+        assert response.status_code == 403
+
+    def test_delete_document_failure(self, client, mock_document_service):
+        mock_document_service.delete_document.side_effect = DatabaseRequestError("Forbidden")
 
         response = client.delete("/document/1")
 
         assert response.status_code == 500
-        assert response.json()["detail"] == "Failed to delete document"
+

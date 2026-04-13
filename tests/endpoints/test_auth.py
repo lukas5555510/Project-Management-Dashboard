@@ -43,7 +43,8 @@ class TestAuthEndpoints:
 
         mock_auth_service.register.assert_called_once()
 
-
+# for all endpoints both happy and sad scenario
+# fix the bug we found
     def test_register_password_mismatch(self,client, mock_auth_service):
         from fastapi import HTTPException
 

@@ -78,8 +78,7 @@ def get_projects(
     responses={
         200: {"description": "Project successfully retrieved"},
         401: {"description": "Unauthorized (user not authenticated)"},
-        403: {"description": "Project not accessible"},
-        404: {"description": "Project not found"},
+        404: {"description": "Project not found or not accessible"},
         500: {"description": "Database error during retrieval"},
     },
 )

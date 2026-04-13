@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class DocumentCreate(BaseModel):
@@ -10,8 +10,7 @@ class DocumentResponse(BaseModel):
     s3_path: str
     project_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DocumentUpdate(BaseModel):
     s3_path: str

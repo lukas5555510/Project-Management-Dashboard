@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from app.schemas.document import DocumentResponse
 
@@ -17,8 +17,7 @@ class ProjectResponse(BaseModel):
     description: Optional[str] = None
     documents: List[DocumentResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ProjectDeleteResponse(BaseModel):
     success: bool

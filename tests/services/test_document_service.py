@@ -125,7 +125,7 @@ class TestDocumentService:
 
     def test_update_document_success(self,service):
         existing = MagicMock()
-        existing.s3_path = "old/file.pdf"
+        existing.s3_path = "documents/dsg35h4h_file.pdf"
         existing.project_id = 1
 
         service.repo.get_by_document_id.return_value = existing
@@ -146,7 +146,7 @@ class TestDocumentService:
 
             result = service.update_document(1, file)
 
-        service.repo.delete_document.assert_called_once()
+        service.s3_client.delete_file_and_zip.assert_called_once_with(existing.s3_path)
         service.s3_client.upload_file.assert_called_once()
         assert result["s3_path"] == updated.s3_path
 
@@ -171,7 +171,7 @@ class TestDocumentService:
     def test_delete_document_success(self,service):
         doc = MagicMock()
         doc.project_id = 1
-        doc.s3_path = "documents/34h3h_file.pdf"
+        doc.s3_path = "documents/4j6456jedje5_file.pdf"
 
         service.repo.get_by_document_id.return_value = doc
         service.repo_project_user.is_user_owner.return_value = True
@@ -179,5 +179,5 @@ class TestDocumentService:
 
         result = service.delete_document(1, 10)
 
-        service.s3_client.delete_file.assert_called_once_with("documents/34h3h_file.pdf")
+        service.s3_client.delete_file_and_zip.assert_called_once_with("documents/4j6456jedje5_file.pdf")
         assert result == {"success": True}
