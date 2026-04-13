@@ -1,13 +1,12 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
-from app.schemas.document import DocumentResponse, DocumentSchema
+from app.schemas.document import DocumentSchema
 
 
-# POST /projects
 class ProjectCreate(BaseModel):
     name: str
     description: Optional[str] = None
+
 class ProjectUpdate(BaseModel):
     name: str
     description: Optional[str]
@@ -26,4 +25,11 @@ class ProjectDeleteResponse(BaseModel):
     message: str
     deleted_id: int
 
+class InvitingToProjectResponse(BaseModel):
+    message: str
+    project_id: int
+    login: str
+
+class InvitingToProjectRequest(BaseModel):
+    login: str
 

@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, EmailStr
+
 
 class UserCreate(BaseModel):
     login: str
@@ -6,11 +7,8 @@ class UserCreate(BaseModel):
     password: str
     repeat_password: str
 
-class UserLogin(BaseModel):
-    login: str
-    password: str
 
-class UserResponse(BaseModel):
+class UserLogin(BaseModel):
     login: str
     password: str
 

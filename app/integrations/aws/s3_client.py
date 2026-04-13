@@ -29,6 +29,7 @@ class S3Client:
             raise
 
     def download_file(self, key: str):
+        """Download a file from S3."""
         try:
             response = self.s3.get_object(
                 Bucket=self.bucket_name,
@@ -41,7 +42,7 @@ class S3Client:
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 raise FileNotFoundError()
-            raise Exception()
+            raise
 
     def delete_file(self, s3_path: str):
         """Delete a file from S3."""

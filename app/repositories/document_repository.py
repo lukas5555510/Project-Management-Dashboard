@@ -9,20 +9,34 @@ from typing import List
 class DocumentRepository:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
-    # lambda functions for AWS service
-    # aws sandbox, in learning platform, we can use bucket s3 bucket file uploaded here and it should be logged "file was uploaded"
 
     def get_by_project_id(self, project_id: int) -> List[Document]:
-        # return all documents that belongs to certain project
+        """
+        Retrieve all documents belonging to a specific project.
+
+        :param project_id: ID of the project whose documents should be fetched
+        :return: List of Document objects (empty list if none found)
+        """
+
         return self.db.query(Document).filter(Document.project_id == project_id).all()
 
     def get_by_document_id(self, document_id: int) -> Document:
-        # returns document with certain id
+        """
+        Retrieve a single document by its unique ID.
+
+        :param document_id: Unique identifier of the document
+        :return: Document object if found, otherwise None
+        """
         return self.db.query(Document).filter(Document.id == document_id).first()
 
-
     def update_document(self, document_id: int, document_data : dict) -> Document | None:
-        # updates document in database
+        """
+        Update an existing document with new field values.
+
+        :param document_id: ID of the document to update
+        :param document_data: Dictionary of fields to update with their new values
+        :return: Updated Document object if found, otherwise None
+        """
         obj = self.get_by_document_id(document_id)
         if not obj:
             return None
@@ -36,7 +50,12 @@ class DocumentRepository:
         return obj
 
     def delete_document(self, document_id: int) -> Document | None:
-        # deletes document from database
+        """
+        Delete a document from the database.
+
+        :param document_id: ID of the document to delete
+        :return: Deleted Document object if it existed, otherwise None
+        """
         obj = self.get_by_document_id(document_id)
         if not obj:
             return None
@@ -46,24 +65,13 @@ class DocumentRepository:
 
         return obj
 
-    def delete_all_project_documents(self, project_id: int) -> int:
-        deleted_count = (
-            self.db.query(Document).filter(Document.project_id == project_id).delete(synchronize_session=False)
-        )
-        self.db.commit()
-        return deleted_count
-
-    def upload_documents(self, documents: List[dict]) -> List[Document]:
-        # adds list of records to database
-        objects = [Document(**document) for document in documents]
-
-        self.db.add_all(objects)
-        self.db.commit()
-
-        return objects
-
     def create_document(self, document_data: dict) -> Document:
-        # adds one document to database
+        """
+        Create and persist a new document in the database.
+
+        :param document_data: Dictionary containing document fields and values
+        :return: The newly created Document object
+        """
         obj = Document(**document_data)
 
         self.db.add(obj)
