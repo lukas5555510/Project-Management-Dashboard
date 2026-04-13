@@ -11,9 +11,10 @@ from app.integrations.aws.s3_client import S3Client
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.project_repository import ProjectRepository, ProjectUserRepository
 from app.repositories.user_repository import UserRepository
-from app.schemas.document import DocumentSchema
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.core.exceptions import PermissionDenied, NotFoundError, ConflictException, DatabaseRequestError
+from app.utils.serializers import serialize_project
+
 
 logger = logging.getLogger(__name__)
 
@@ -75,33 +76,7 @@ class ProjectService:
 
             for project in projects:
                 try:
-                    # Converting each project to a dictionary with basic attributes
-                    project_dict = {
-                        "id": project.id,
-                        "name": project.name,
-                        "description": project.description,
-                        "documents": []  # Initialize empty documents list
-                    }
-
-                    # Converting each document and add to the project's documents list
-                    for doc in project.documents:
-                        try:
-                            # Convert SQLAlchemy Document to DocumentSchema
-                            doc_dict = {
-                                "id": doc.id,
-                                "s3_path": doc.s3_path,
-                                "project_id": doc.project_id
-                            }
-                            document = DocumentSchema.model_validate(doc_dict)
-                            project_dict["documents"].append(document)
-                        except ValidationError as doc_err:
-                            logger.warning(f"Document validation failed for doc_id={doc.id}: {doc_err}")
-                            # Skip invalid document
-                            continue
-
-                    #Creating the final ProjectResponse from the prepared dictionary
-                    project_response = ProjectResponse.model_validate(project_dict)
-                    result.append(project_response)
+                    result.append(serialize_project(project))
 
                 except ValidationError as proj_err:
                     logger.error(f"Project validation failed for project_id={project.id}: {proj_err}")
@@ -133,35 +108,12 @@ class ProjectService:
 
         try:
             project = self.project_repo.get_project_by_id(user_id, project_id)
-
-            if not project:
-                raise NotFoundError("Project not found")
-
-            project_dict = {
-                "id": project.id,
-                "name": project.name,
-                "description": project.description,
-                "documents": []  # Initialize empty documents list
-            }
-            for doc in project.documents:
-                try:
-                    # Convert SQLAlchemy Document to DocumentSchema
-                    doc_dict = {
-                        "id": doc.id,
-                        "s3_path": doc.s3_path,
-                        "project_id": doc.project_id
-                    }
-                    document = DocumentSchema.model_validate(doc_dict)
-                    project_dict["documents"].append(document)
-                except ValidationError as doc_err:
-                    logger.warning(f"Document validation failed for doc_id={doc.id}: {doc_err}")
-                    # Skip invalid document
-                    continue
-
-            return ProjectResponse.model_validate(project_dict)
+            return ProjectResponse.model_validate(serialize_project(project))
 
         except SQLAlchemyError:
             raise DatabaseRequestError("Database error getting project")
+        except ValidationError as e:
+            raise
 
 
     def update_project(self, project_id: int, user_id: int, project: ProjectUpdate) -> ProjectResponse:
