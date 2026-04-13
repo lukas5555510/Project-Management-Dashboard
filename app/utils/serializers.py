@@ -2,11 +2,10 @@ from venv import logger
 
 from pydantic import ValidationError
 
-from app.schemas.document import DocumentSchema
+from app.schemas.document import DocumentResponse
 from app.schemas.project import ProjectResponse
 
-
-def serialize_document(doc) -> DocumentSchema:
+def serialize_document(doc) -> DocumentResponse:
     """
     Convert SQLAlchemy Document model to DocumentSchema.
     """
@@ -16,7 +15,7 @@ def serialize_document(doc) -> DocumentSchema:
             "s3_path": doc.s3_path,
             "project_id": doc.project_id
         }
-        return DocumentSchema.model_validate(doc_dict)
+        return DocumentResponse.model_validate(doc_dict)
 
     except ValidationError as e:
         logger.warning(

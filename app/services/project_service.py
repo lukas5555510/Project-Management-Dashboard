@@ -110,10 +110,11 @@ class ProjectService:
             project = self.project_repo.get_project_by_id(user_id, project_id)
             return ProjectResponse.model_validate(serialize_project(project))
 
+        except ValidationError:
+            raise
         except SQLAlchemyError:
             raise DatabaseRequestError("Database error getting project")
-        except ValidationError as e:
-            raise
+
 
 
     def update_project(self, project_id: int, user_id: int, project: ProjectUpdate) -> ProjectResponse:

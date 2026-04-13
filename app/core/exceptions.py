@@ -11,7 +11,7 @@ class ValidationError(Exception):
 
 
 class ConflictException(Exception):
-    """Raised when there data conflict (sth already exists).)"""
+    """Raised when there data conflict (sth already exists)."""
 
 
 class DatabaseRequestError(Exception):

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from app.schemas.document import DocumentSchema
+from app.schemas.document import DocumentResponse
 
 
 class ProjectCreate(BaseModel):
@@ -15,7 +15,7 @@ class ProjectResponse(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
-    documents: List[DocumentSchema] = []
+    documents: List[DocumentResponse] = []
 
     class Config:
         from_attributes = True
