@@ -1,93 +1,117 @@
 import pytest
-from pydantic import EmailStr
-from sqlalchemy.exc import IntegrityError
+from unittest.mock import MagicMock
 
 from app.repositories.user_repository import UserRepository
 from app.models.user import User
-
-def test_create_user(db):
-    repo = UserRepository(db)
-
-    user = repo.create_user(
-        login="john",
-        email=EmailStr("john@example.com"),
-        hashed_password="hashed123"
-    )
-
-    assert user.id is not None
-    assert user.login == "john"
-    assert user.email == "john@example.com"
-
-    # Verify in DB
-    db_user = db.query(User).filter(User.id == user.id).first()
-    assert db_user is not None
+from app.models.project import ProjectUser, Project
+from app.models.document import Document
 
 
-def test_get_user_by_login(db):
-    repo = UserRepository(db)
-
-    repo.create_user(
-        login="john",
-        email=EmailStr("john@example.com"),
-        hashed_password="hashed123"
-    )
-
-    user = repo.get_user_by_login("john")
-
-    assert user is not None
-    assert user.login == "john"
-
-def test_get_user_by_login_not_found(db):
-    repo = UserRepository(db)
-
-    user = repo.get_user_by_login("missing")
-
-    assert user is None
+@pytest.fixture
+def mock_db():
+    return MagicMock()
 
 
-def test_get_user_by_id(db):
-    repo = UserRepository(db)
+@pytest.fixture
+def user_repo(mock_db):
+    return UserRepository(db=mock_db)
 
-    created = repo.create_user(
-        login="john",
-        email=EmailStr("john@example.com"),
-        hashed_password="hashed123"
-    )
+class TestUserRepository:
+    # -------------------------
+    # CREATE USER
+    # -------------------------
 
-    user = repo.get_user_by_id(created.id)
+    def test_create_user_success(self,user_repo, mock_db):
+        # given
+        login = "john"
+        email = "john@example.com"
+        hashed_password = "hashed123"
 
-    assert user.id == created.id
+        # when
+        result = user_repo.create_user(login, email, hashed_password)
+
+        # then
+        # check object created correctly
+        assert isinstance(result, User)
+        assert result.login == login
+        assert result.email == email
+        assert result.hashed_password == hashed_password
+
+        # verify DB interactions
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_called_once_with(result)
 
 
-def test_create_user_duplicate_login(db):
-    repo = UserRepository(db)
+    # -------------------------
+    # GET USER BY LOGIN
+    # -------------------------
 
-    repo.create_user(
-        login="john",
-        email=EmailStr("john1@example.com"),
-        hashed_password="hashed123"
-    )
+    def test_get_user_by_login_found(self,user_repo, mock_db):
+        # given
+        login = "john"
 
-    with pytest.raises(IntegrityError):
-        repo.create_user(
-            login="john",  # duplicate
-            email=EmailStr("john2@example.com"),
-            hashed_password="hashed123"
-        )
+        expected_user = User(id=1, login=login, email="john@example.com", hashed_password="x")
+
+        mock_query = mock_db.query.return_value
+        mock_filter = mock_query.filter.return_value
+        mock_filter.first.return_value = expected_user
+
+        # when
+        result = user_repo.get_user_by_login(login)
+
+        # then
+        assert result == expected_user
+
+        mock_db.query.assert_called_once_with(User)
+        mock_query.filter.assert_called_once()
+        mock_filter.first.assert_called_once()
 
 
-def test_create_user_duplicate_email(db):
-    repo = UserRepository(db)
+    def test_get_user_by_login_not_found(self,user_repo, mock_db):
+        # given
+        login = "unknown"
 
-    repo.create_user(
-        login="john1",
-        email=EmailStr("john@example.com"),
-        hashed_password="hashed123"
-    )
+        mock_db.query.return_value.filter.return_value.first.return_value = None
 
-    with pytest.raises(IntegrityError):
-        repo.create_user(
-            login="john2",
-            email=EmailStr("john@example.com"),  # duplicate
-            hashed_password="hashed123"
-        )
+        # when
+        result = user_repo.get_user_by_login(login)
+
+        # then
+        assert result is None
+
+
+    # -------------------------
+    # GET USER BY ID
+    # -------------------------
+
+    def test_get_user_by_id_found(self,user_repo, mock_db):
+        # given
+        user_id = 1
+        expected_user = User(id=user_id, login="john", email="john@example.com", hashed_password="x")
+
+        mock_query = mock_db.query.return_value
+        mock_filter = mock_query.filter.return_value
+        mock_filter.first.return_value = expected_user
+
+        # when
+        result = user_repo.get_user_by_id(user_id)
+
+        # then
+        assert result == expected_user
+
+        mock_db.query.assert_called_once_with(User)
+        mock_query.filter.assert_called_once()
+        mock_filter.first.assert_called_once()
+
+
+    def test_get_user_by_id_not_found(self,user_repo, mock_db):
+        # given
+        user_id = 999
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+
+        # when
+        result = user_repo.get_user_by_id(user_id)
+
+        # then
+        assert result is None

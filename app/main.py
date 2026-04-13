@@ -6,7 +6,12 @@ from app.core.exceptions import NotFoundError, PermissionDenied, ConflictExcepti
     ConflictException, DatabaseRequestError
 from app.db.init_db import init_db
 
-app = FastAPI(title="Project Management API")
+def create_app():
+    app = FastAPI(title="Project Management API")
+    return app
+
+app = create_app()
+
 
 app.include_router(api_router)
 
@@ -31,22 +36,24 @@ async def user_already_invited(request: Request, exc: ConflictException):
 async def client_error_handler(request: Request, exc: ClientError):
     return JSONResponse(status_code=500, content={"description": "S3 Error"})
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": True,
-            "status_code": exc.status_code,
-            "message": exc.detail,
-        },
-    )
+# @app.exception_handler(HTTPException)
+# async def http_exception_handler(request: Request, exc: HTTPException):
+#     return JSONResponse(
+#         status_code=exc.status_code,
+#         content={
+#             "error": True,
+#             "status_code": exc.status_code,
+#             "message": exc.detail,
+#         },
+#     )
 
 @app.exception_handler(DatabaseRequestError)
 async def database_exception_handler(request: Request, exc: DatabaseRequestError):
     return JSONResponse(status_code=500, content={"description": f"{exc}"})
 
-init_db()
+@app.on_event("startup")
+def startup():
+    init_db()
 
 if __name__ == "__main__":
     import uvicorn

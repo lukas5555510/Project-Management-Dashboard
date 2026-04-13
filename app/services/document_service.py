@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Dict, Any
+from typing import List
 from fastapi import UploadFile, Depends
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -151,7 +151,7 @@ class DocumentService:
             if not existing_document:
                 raise NotFoundError(f"Document with id {document_id} not found")
 
-            self.repo.delete_document(existing_document.s3_path)
+            self.s3_client.delete_file(existing_document.s3_path)
 
             filename = f"{uuid.uuid4()}_{file.filename}"
             # Upload the file to S3

@@ -29,4 +29,5 @@ class Settings(BaseSettings):
 
 
 # Instantiate the settings object
-settings = Settings()
+def get_settings():
+    return Settings()

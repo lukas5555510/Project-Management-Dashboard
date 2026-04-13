@@ -1,6 +1,6 @@
 from fastapi import Depends
 
-from app.core.exceptions import ConflictException, InvalidCredentialsError, NotFoundError
+from app.core.exceptions import ConflictException, InvalidCredentialsError
 from app.schemas.user import UserCreate, UserLogin, Token
 from app.services.user_service import UserService
 from app.core.security import hash_password, verify_password, create_access_token

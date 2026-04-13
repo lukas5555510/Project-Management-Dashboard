@@ -214,4 +214,3 @@ class ProjectUserRepository:
                 .count() > 0
         )
 
-

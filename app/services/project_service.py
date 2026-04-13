@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from pydantic import ValidationError
 import logging
 from sqlalchemy.exc import SQLAlchemyError
@@ -27,7 +27,7 @@ class ProjectService:
         self.s3_client = S3Client()
 
 
-    def create_project(self, user_id: int, payload: ProjectCreate):
+    def create_project(self, user_id: int, payload: ProjectCreate) -> ProjectResponse:
         """
         Create a new project and assign ownership to the creator.
 
