@@ -120,7 +120,7 @@ class TestDocumentService:
         file = MagicMock(spec=UploadFile)
 
         with pytest.raises(NotFoundError):
-            service.update_document(1, file)
+            service.update_document(1,1, file)
 
 
     def test_update_document_success(self,service):
@@ -144,7 +144,7 @@ class TestDocumentService:
 
             validate.return_value = {"s3_path": updated.s3_path}
 
-            result = service.update_document(1, file)
+            result = service.update_document(1,1, file)
 
         service.s3_client.delete_file_and_zip.assert_called_once_with(existing.s3_path)
         service.s3_client.upload_file.assert_called_once()

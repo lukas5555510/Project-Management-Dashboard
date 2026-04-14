@@ -124,6 +124,7 @@ def download_document(
     responses={
         200: {"description": "Document successfully updated"},
         401: {"description": "Unauthorized (user not authenticated)"},
+        403: {"description": "User has no access"},
         404: {"description": "Document not found"},
         500: {"description": "Database or storage error during update"},
     },
@@ -134,7 +135,7 @@ def update_document(
     user_id: int = Depends(get_current_user_id),
     document_service: DocumentService = Depends()
 ):
-    return document_service.update_document(document_id, file)
+    return document_service.update_document(user_id, document_id, file)
 
 
 @router.delete(

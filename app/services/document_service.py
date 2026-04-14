@@ -129,7 +129,7 @@ class DocumentService:
             raise DatabaseRequestError("Database error download document")
 
 
-    def update_document(self, document_id: int, file: UploadFile) -> DocumentResponse:
+    def update_document(self, user_id: int, document_id: int, file: UploadFile) -> DocumentResponse:
         """
         Replace an existing document with a new uploaded file.
 
@@ -140,6 +140,7 @@ class DocumentService:
         - Uploads the new file to S3 with a unique filename
         - Updates the database record with the new file path
 
+        :param user_id:
         :param document_id: ID of the document to update
         :param file: New file to replace the existing document
         :return: DocumentResponse representing the updated document
@@ -151,6 +152,9 @@ class DocumentService:
             existing_document = self.repo.get_by_document_id(document_id)
             if not existing_document:
                 raise NotFoundError(f"Document with id {document_id} not found")
+
+            if not self.repo_project_user.user_has_access(user_id, existing_document.project_id):
+                raise PermissionDenied("User has no access to project")
 
             # Delete old files from S3
             self.s3_client.delete_file_and_zip(existing_document.s3_path)
