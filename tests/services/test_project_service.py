@@ -21,6 +21,7 @@ def service():
     service.user_repo = MagicMock()
     service.document_repo = MagicMock()
     service.s3_client = MagicMock()
+    service.validator = MagicMock()
 
     return service
 
@@ -117,7 +118,6 @@ class TestProjectService:
 
     def test_update_project_success(self,service):
         service.project_repo.get_project_by_id.return_value = MagicMock()
-        service.project_user_repo.user_has_access.return_value = True
 
         payload = ProjectUpdate(name="New", description="NewDesc")
 
@@ -136,7 +136,7 @@ class TestProjectService:
 
 
     def test_update_project_not_found(self,service):
-        service.project_repo.get_project_by_id.return_value = None
+        service.validator.validate_project_exist = MagicMock(side_effect=NotFoundError)
 
         payload = ProjectUpdate(name="X", description="Y")
 
@@ -147,7 +147,7 @@ class TestProjectService:
 
     def test_update_project_permission_denied(self,service):
         service.project_repo.get_project_by_id.return_value = MagicMock()
-        service.project_user_repo.user_has_access.return_value = False
+        service.validator.validate_user_has_access = MagicMock(side_effect=PermissionDenied)
 
         payload = ProjectUpdate(name="X", description="Y")
 
@@ -156,7 +156,6 @@ class TestProjectService:
 
     def test_delete_project_success(self,service):
         service.project_repo.get_project_by_id.return_value = MagicMock()
-        service.project_user_repo.is_user_owner.return_value = True
 
         service.document_repo.get_by_project_id.return_value = [
             MagicMock(s3_path="file1"),
@@ -173,14 +172,14 @@ class TestProjectService:
 
 
     def test_grant_access_not_owner(self,service):
-        service.project_user_repo.is_user_owner.return_value = False
+        service.validator.validate_user_has_ownership = MagicMock(side_effect=PermissionDenied)
 
         with pytest.raises(PermissionDenied):
             service.grant_access_to_project(1, 10, "john")
 
 
     def test_grant_access_user_not_found(self,service):
-        service.project_user_repo.is_user_owner.return_value = True
+        service.project_user_repo.is_user_owner.return_value = MagicMock()
         service.user_repo.get_user_by_login.return_value = None
 
         with pytest.raises(NotFoundError):

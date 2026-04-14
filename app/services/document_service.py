@@ -9,6 +9,7 @@ from app.integrations.aws.s3_client import S3Client
 from app.core.exceptions import NotFoundError, PermissionDenied, DatabaseRequestError
 from app.repositories.project_repository import ProjectUserRepository, ProjectRepository
 from app.schemas.document import DocumentResponse
+from app.utils.util import ValidateAccessAndExistence
 
 
 class DocumentService:
@@ -17,6 +18,7 @@ class DocumentService:
         self.repo_project_user = ProjectUserRepository(db)
         self.repo_project = ProjectRepository(db)
         self.s3_client = S3Client()
+        self.validator = ValidateAccessAndExistence(self.repo_project,self.repo_project_user)
 
     def get_project_documents(self, project_id: int, user_id: int) -> List[DocumentResponse]:
         """
@@ -35,10 +37,12 @@ class DocumentService:
         """
 
         try:
-            if not self.repo_project.get_project_by_id(user_id,project_id):
-                raise NotFoundError("Project not found")
-            if not self.repo_project_user.user_has_access(user_id, project_id):
-                raise PermissionDenied("User has no access to project")
+            self.validator.validate_project_exist(user_id, project_id)
+            self.validator.validate_user_has_access(user_id, project_id)
+            # if not self.repo_project.get_project_by_id(user_id,project_id):
+            #     raise NotFoundError("Project not found")
+            # if not self.repo_project_user.user_has_access(user_id, project_id):
+            #     raise PermissionDenied("User has no access to project")
             documents = self.repo.get_by_project_id(project_id)
             return [DocumentResponse.model_validate(doc) for doc in documents]
         except SQLAlchemyError:
@@ -65,10 +69,8 @@ class DocumentService:
         """
 
         try:
-            if not self.repo_project.get_project_by_id(user_id,project_id):
-                raise NotFoundError("Project not found")
-            if not self.repo_project_user.user_has_access(user_id, project_id):
-                raise PermissionDenied("User has no access to project")
+            self.validator.validate_project_exist(user_id, project_id)
+            self.validator.validate_user_has_access(user_id, project_id)
 
             # Generate a unique filename to avoid collisions in S3
             filename = f"{uuid.uuid4()}_{file.filename}"
@@ -112,14 +114,13 @@ class DocumentService:
         """
 
         try:
-            document = self.repo.get_by_document_id(document_id)
 
+            document = self.repo.get_by_document_id(document_id)
             if not document:
                 raise NotFoundError(f"Document not found")
 
-            # 2. Authorization check
-            if not self.repo_project_user.user_has_access(user_id, document.project_id):
-                raise PermissionDenied("User has no access to project")
+            self.validator.validate_project_exist(user_id, document.project_id)
+            self.validator.validate_user_has_access(user_id, document.project_id)
 
             # 3. Download file from S3
             file_stream = self.s3_client.download_file(document.s3_path)
@@ -150,11 +151,9 @@ class DocumentService:
 
         try:
             existing_document = self.repo.get_by_document_id(document_id)
-            if not existing_document:
-                raise NotFoundError(f"Document with id {document_id} not found")
 
-            if not self.repo_project_user.user_has_access(user_id, existing_document.project_id):
-                raise PermissionDenied("User has no access to project")
+            self.validator.validate_project_exist(user_id, existing_document.project_id)
+            self.validator.validate_user_has_access(user_id, existing_document.project_id)
 
             # Delete old files from S3
             self.s3_client.delete_file_and_zip(existing_document.s3_path)
@@ -169,7 +168,6 @@ class DocumentService:
                 "s3_path": s3_path,
                 "project_id": existing_document.project_id,
             }
-
             updated_document = self.repo.update_document(document_id, document_data)
 
             return DocumentResponse.model_validate(updated_document)
@@ -204,8 +202,7 @@ class DocumentService:
             if not document:
                 raise NotFoundError(f"Document not found")
 
-            if not self.repo_project_user.is_user_owner(user_id,document.project_id):
-                raise PermissionDenied("Only project owner can delete document")
+            self.validator.validate_user_has_ownership(user_id, document.project_id)
 
             # Delete from S3 first
             self.s3_client.delete_file_and_zip(document.s3_path)

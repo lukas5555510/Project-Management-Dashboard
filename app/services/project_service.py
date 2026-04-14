@@ -14,6 +14,7 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.core.exceptions import PermissionDenied, NotFoundError, ConflictException, DatabaseRequestError
 from app.utils.serializers import serialize_project
+from app.utils.util import ValidateAccessAndExistence
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class ProjectService:
         self.user_repo = UserRepository(db)
         self.document_repo = DocumentRepository(db)
         self.s3_client = S3Client()
+        self.validator = ValidateAccessAndExistence(self.project_repo,self.project_user_repo)
 
 
     def create_project(self, user_id: int, payload: ProjectCreate) -> ProjectResponse:
@@ -106,10 +108,9 @@ class ProjectService:
         """
 
         try:
-            if not self.project_repo.get_project_by_id(user_id, project_id):
-                raise NotFoundError("Project not found")
-            if not self.project_user_repo.user_has_access(user_id, project_id):
-                raise PermissionDenied("User had no access to this project")
+            self.validator.validate_project_exist(user_id, project_id)
+            self.validator.validate_user_has_access(user_id, project_id)
+
             project = self.project_repo.get_project_by_id(user_id, project_id)
             return ProjectResponse.model_validate(serialize_project(project))
 
@@ -140,10 +141,9 @@ class ProjectService:
         """
 
         try:
-            if not self.project_repo.get_project_by_id(user_id, project_id):
-                raise NotFoundError("Project not found")
-            if not self.project_user_repo.user_has_access(user_id, project_id):
-                raise PermissionDenied("User had no access to this project")
+            self.validator.validate_project_exist(user_id, project_id)
+            self.validator.validate_user_has_access(user_id, project_id)
+
             project_dict = project.model_dump(exclude_unset=True)
             project = self.project_repo.update_project(user_id,project_id,project_dict)
 
@@ -173,10 +173,8 @@ class ProjectService:
         """
 
         try:
-            if not self.project_repo.get_project_by_id(user_id, project_id):
-                raise NotFoundError("Project not found")
-            if not self.project_user_repo.is_user_owner(user_id, project_id):
-                raise PermissionDenied("Only owner can delete project")
+            self.validator.validate_project_exist(user_id, project_id)
+            self.validator.validate_user_has_ownership(user_id, project_id)
 
             documents = self.document_repo.get_by_project_id(project_id)
 
@@ -211,10 +209,8 @@ class ProjectService:
         """
 
         try:
-            if not self.project_repo.get_project_by_id(user_id, project_id):
-                raise NotFoundError("Project not found")
-            if not self.project_user_repo.is_user_owner(user_id, project_id):
-                raise PermissionDenied("Only owner can invite")
+            self.validator.validate_project_exist(user_id, project_id)
+            self.validator.validate_user_has_ownership(user_id, project_id)
 
             user_for_who_we_grant_access = self.user_repo.get_user_by_login(login)
             if not user_for_who_we_grant_access:

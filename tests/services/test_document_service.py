@@ -17,31 +17,34 @@ def service():
     service.repo_project_user = MagicMock()
     service.repo_project = MagicMock()
     service.s3_client = MagicMock()
+    service.validator = MagicMock()
 
     return service
 
 class TestDocumentService:
+
     def test_get_project_documents_permission_denied(self,service):
-        service.repo_project_user.user_has_access.return_value = False
+        service.validator.validate_user_has_access = MagicMock(side_effect=PermissionDenied)
 
         with pytest.raises(PermissionDenied):
             service.get_project_documents(project_id=1, user_id=10)
-
-        service.repo_project_user.user_has_access.assert_called_once_with(10, 1)
+        service.validator.validate_user_has_access.assert_called_once()
+        service.validator.validate_project_exist.assert_called_once()
 
 
     def test_upload_document_project_not_found(self,service):
-        service.repo_project.get_project_by_id.return_value = None
-
+        service.validator.validate_project_exist = MagicMock(side_effect=NotFoundError)
         file = MagicMock(spec=UploadFile)
 
         with pytest.raises(NotFoundError):
             service.upload_document(1, 10, file)
 
+        service.validator.validate_project_exist.assert_called_once()
+
 
     def test_upload_document_permission_denied(self,service):
         service.repo_project.get_project_by_id.return_value = MagicMock()
-        service.repo_project_user.user_has_access.return_value = False
+        service.validator.validate_user_has_access = MagicMock(side_effect=PermissionDenied)
 
         file = MagicMock(spec=UploadFile)
 
@@ -51,7 +54,7 @@ class TestDocumentService:
 
     def test_upload_document_success(self,service):
         service.repo_project.get_project_by_id.return_value = MagicMock()
-        service.repo_project_user.user_has_access.return_value = True
+        service.validator.validate_user_has_access = MagicMock()
 
         file = MagicMock(spec=UploadFile)
         file.filename = "test.pdf"
@@ -73,6 +76,7 @@ class TestDocumentService:
         service.repo.create_document.assert_called_once()
 
         assert result["s3_path"] == created_doc.s3_path
+        service.validator.validate_user_has_access.assert_called_once()
 
     def test_download_document_not_found(self,service):
         service.repo.get_by_document_id.return_value = None
@@ -86,7 +90,7 @@ class TestDocumentService:
         doc.s3_path = "documents/4j6456jedje5_file.pdf"
 
         service.repo.get_by_document_id.return_value = doc
-        service.repo_project_user.user_has_access.return_value = False
+        service.validator.validate_user_has_access = MagicMock(side_effect=PermissionDenied)
 
         with pytest.raises(PermissionDenied):
             service.download_document(1, 10)
@@ -98,7 +102,8 @@ class TestDocumentService:
         doc.s3_path = "documents/4h56J5j6_file_test.pdf"
 
         service.repo.get_by_document_id.return_value = doc
-        service.repo_project_user.user_has_access.return_value = True
+        service.validator.validate_project_exist = MagicMock()
+        service.validator.validate_user_has_access = MagicMock()
 
         service.s3_client.download_file.return_value = {
             "Body": b"file-content",
@@ -112,10 +117,12 @@ class TestDocumentService:
         assert body == b"file-content"
         assert content_type == "application/pdf"
         assert "file_test.pdf" in filename
+        service.validator.validate_user_has_access.assert_called_once()
+        service.validator.validate_project_exist.assert_called_once()
 
 
     def test_update_document_not_found(self,service):
-        service.repo.get_by_document_id.return_value = None
+        service.validator.validate_project_exist = MagicMock(side_effect=NotFoundError)
 
         file = MagicMock(spec=UploadFile)
 
@@ -127,12 +134,11 @@ class TestDocumentService:
         existing = MagicMock()
         existing.s3_path = "documents/dsg35h4h_file.pdf"
         existing.project_id = 1
-
+        service.validator.validate_project_exist = MagicMock()
+        service.validator.validate_user_has_access = MagicMock()
         service.repo.get_by_document_id.return_value = existing
-
         file = MagicMock(spec=UploadFile)
         file.filename = "new.pdf"
-
         updated = MagicMock()
         updated.s3_path = "documents/new_uuid_new.pdf"
         updated.project_id = 1
@@ -149,6 +155,8 @@ class TestDocumentService:
         service.s3_client.delete_file_and_zip.assert_called_once_with(existing.s3_path)
         service.s3_client.upload_file.assert_called_once()
         assert result["s3_path"] == updated.s3_path
+        service.validator.validate_user_has_access.assert_called_once()
+        service.validator.validate_project_exist.assert_called_once()
 
 
     def test_delete_document_not_found(self,service):
@@ -162,11 +170,11 @@ class TestDocumentService:
         doc.project_id = 1
 
         service.repo.get_by_document_id.return_value = doc
-        service.repo_project_user.is_user_owner.return_value = False
+        service.validator.validate_user_has_ownership = MagicMock(side_effect=PermissionDenied)
 
         with pytest.raises(PermissionDenied):
             service.delete_document(1, 10)
-
+        service.validator.validate_user_has_ownership.assert_called_once()
 
     def test_delete_document_success(self,service):
         doc = MagicMock()
@@ -181,3 +189,4 @@ class TestDocumentService:
 
         service.s3_client.delete_file_and_zip.assert_called_once_with("documents/4j6456jedje5_file.pdf")
         assert result == {"success": True}
+        service.validator.validate_user_has_ownership.assert_called_once()
