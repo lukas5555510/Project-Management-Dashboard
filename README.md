@@ -1,6 +1,6 @@
 # Project Management Dashboard
 
-Designed and implemented a scalable backend system for project collaboration, featuring role-based access control, modular architecture (service/repository pattern), and AWS-based asynchronous document processing. The system emphasizes clean separation of concerns, testability, and real-world backend design practices.
+Designed and implemented a scalable backend system for project collaboration, featuring role-based access control, modular architecture (service/repository pattern), and AWS-based integration. The system emphasizes clean separation of concerns, testability, and real-world backend design practices.
 
 ---
 
